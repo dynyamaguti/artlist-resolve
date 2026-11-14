@@ -1,0 +1,10 @@
+# Áudios licenciados do Artlist e caches locais — nunca versionar
+cache/
+downloads/
+
+# Lixo do macOS / volume externo
+.DS_Store
+._*
+
+__pycache__/
+*.pyc

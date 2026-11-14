@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Artlist → Resolve</title>
+<style>
+:root{
+  --bg:#141517; --panel:#1c1e21; --panel2:#23262a; --line:#2e3237; --text:#e8e9ea; --muted:#8b9096;
+  --accent:#ffcf3f; --accent-ink:#1a1500; --wave:#5b6570; --wave-done:#ffcf3f; --sel:rgba(255,207,63,.22);
+  --hook:rgba(120,170,255,.14); --ok:#4cc38a; --err:#ff6b6b;
+}
+@media (prefers-color-scheme: light){
+  :root{--bg:#f4f4f2;--panel:#fff;--panel2:#f0f0ed;--line:#dcdcd6;--text:#1c1d1f;--muted:#6b7078;
+  --wave:#a3abb4;--accent:#d99a00;--accent-ink:#fff;--sel:rgba(217,154,0,.22);--hook:rgba(60,110,220,.12)}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Inter",system-ui,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+h1{font-size:15px;margin:0;font-weight:650;letter-spacing:.2px}
+.pill{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--err)}
+.dot.on{background:var(--ok)}
+main{max-width:1100px;margin:0 auto;padding:18px 20px 80px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.tabs{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap}
+.tab,.seg button{background:transparent;color:var(--muted);border:1px solid transparent;border-radius:8px;padding:6px 12px;cursor:pointer;font:inherit}
+.tab.on,.seg button.on{background:var(--panel2);color:var(--text);border-color:var(--line)}
+.seg{display:flex;gap:2px;margin-left:auto}
+.row1{display:flex;gap:8px}
+input[type=text],input[type=number],select{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 12px;font:inherit;min-width:0}
+input[type=text]{flex:1}
+input[type=number]{width:78px}
+button.primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:9px 18px;font-weight:650;cursor:pointer;font-size:14px}
+button.primary:disabled{opacity:.5;cursor:wait}
+button.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:6px 10px;cursor:pointer;font:inherit;font-size:12.5px}
+button.ghost:hover{border-color:var(--muted)}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px;color:var(--muted);font-size:12.5px}
+.filters label{display:flex;gap:6px;align-items:center}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.chip{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:999px;padding:5px 12px;cursor:pointer;font-size:13px}
+.chip.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.chip.sug{border-style:dashed}
+.interp{margin:14px 2px 4px;color:var(--muted);font-size:13px}
+.err{color:var(--err)}
+#list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.track{display:grid;grid-template-columns:64px 1fr;gap:6px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.track.active{border-color:var(--accent)}
+.art{width:64px;height:64px;border-radius:8px;background:var(--panel2) center/cover;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:22px}
+.head{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.title{font-weight:650}
+.meta{color:var(--muted);font-size:12.5px}
+.wavewrap{grid-column:1/-1;position:relative}
+canvas{width:100%;height:64px;display:block;cursor:crosshair;border-radius:6px;background:var(--panel2)}
+.actions{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sp{flex:1}
+.range{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12.5px}
+.range b{color:var(--text)}
+.status{font-size:12.5px;min-height:18px;grid-column:1/-1}
+.status.ok{color:var(--ok)} .status.bad{color:var(--err)}
+.empty{color:var(--muted);text-align:center;padding:40px 0}
+kbd{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:0 5px;font-size:11px}
+@media (max-width:640px){.track{grid-template-columns:48px 1fr}.art{width:48px;height:48px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Artlist → Resolve</h1>
+  <div class="seg" id="kindSeg" style="margin-left:0">
+    <button data-k="music" class="on">Músicas</button><button data-k="sfx">SFX</button>
+  </div>
+  <div class="pill"><span class="dot" id="dot"></span><span id="rstat">Resolve: verificando…</span></div>
+</header>
+<main>
+  <section class="box">
+    <div class="tabs" id="modeTabs">
+      <button class="tab on" data-m="describe">Descrever</button>
+      <button class="tab" data-m="reference">Referência</button>
+      <button class="tab" data-m="moods">Moods</button>
+    </div>
+    <div id="moodArea" hidden>
+      <div class="chips" id="chips"></div>
+    </div>
+    <div class="row1">
+      <input type="text" id="q" autocomplete="off">
+      <button class="ghost" id="suggest" hidden title="Peça ao Claude moods para a sua cena">✨ Sugerir moods</button>
+      <button class="primary" id="go">Buscar</button>
+    </div>
+    <div class="filters" id="filters">
+      <label>Vocal <select id="vocals"><option value="ANY">qualquer</option><option value="INSTRUMENTAL">instrumental</option><option value="VOCAL">com voz</option></select></label>
+      <label>BPM <input type="number" id="bpmMin" placeholder="mín"> – <input type="number" id="bpmMax" placeholder="máx"></label>
+      <label>Duração (s) <input type="number" id="durMin" placeholder="mín"> – <input type="number" id="durMax" placeholder="máx"></label>
+    </div>
+  </section>
+
+  <div class="interp" id="interp"></div>
+  <div id="list"><div class="empty">Descreva a cena, cole um link do Artlist como referência ou escolha moods.</div></div>
+  <p class="meta" style="margin-top:18px">Atalhos (faixa tocando ou sob o mouse): <kbd>Espaço</kbd> play/pausa · <kbd>I</kbd> marca entrada · <kbd>O</kbd> marca saída — dê play e aperte I/O no ponto desejado. Ou arraste na waveform para selecionar; arraste a borda amarela para ajustar; <b>▶ Trecho</b> ouve só o In→Out. O download só acontece ao importar (conta no seu limite diário do Artlist).</p>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const MOODS = ["Épico","Inspirador","Emocional","Sombrio","Tenso","Misterioso","Alegre","Energético","Calmo","Romântico","Nostálgico","Triste","Esperançoso","Cinematográfico","Corporativo","Divertido"];
+const PH = {
+  describe: "Ex.: trilha crescente para abertura de vídeo de viagem, guitarras limpas, sensação de liberdade",
+  reference: "Link do Artlist, ID, nome da faixa ou artista (ex.: “parecida com Epicness”, “estilo Hans Zimmer”)",
+  moods: "Contexto opcional (ex.: vídeo institucional de 30s)"
+};
+const PH_SFX = {describe:"Ex.: whoosh de transição rápida, porta de metal batendo, passos em cascalho", reference:"Link do SFX ou descrição de um som parecido", moods:"Contexto opcional"};
+let kind = "music", mode = "describe", moods = new Set(), rows = new Map(), activeId = null, hoverId = null;
+function hint(r, msg) { r.st.className = "status"; r.st.textContent = msg; clearTimeout(r.hintT); r.hintT = setTimeout(() => { if (r.st.textContent === msg) r.st.textContent = ""; }, 5000); }
+// botão clicado não deve ficar com foco (senão Espaço/Enter reativam o botão e anulam o atalho)
+document.addEventListener("click", e => { const b = e.target.closest("button"); if (b) b.blur(); });
+const audio = new Audio(); audio.preload = "auto";
+
+const fmt = s => { s = Math.max(0, s||0); const m = Math.floor(s/60); return m + ":" + (s%60).toFixed(1).padStart(4,"0"); };
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const api = async (path, body) => {
+  const r = await fetch(path, body ? {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)} : undefined);
+  const j = await r.json(); if (!r.ok) throw new Error(j.error || r.statusText); return j;
+};
+
+/* ── UI de busca ── */
+function renderChips(extra=[]) {
+  const box = $("#chips"); box.innerHTML = "";
+  [...MOODS, ...extra].forEach((m,i) => {
+    const c = document.createElement("button"); c.className = "chip" + (i>=MOODS.length?" sug":"") + (moods.has(m)?" on":""); c.textContent = m;
+    c.onclick = () => { moods.has(m) ? moods.delete(m) : moods.add(m); c.classList.toggle("on"); };
+    box.appendChild(c);
+  });
+}
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll("#modeTabs .tab").forEach(t => t.classList.toggle("on", t.dataset.m === m));
+  $("#moodArea").hidden = m !== "moods"; $("#suggest").hidden = m !== "moods";
+  $("#q").placeholder = (kind==="sfx"?PH_SFX:PH)[m];
+}
+document.querySelectorAll("#modeTabs .tab").forEach(t => t.onclick = () => setMode(t.dataset.m));
+document.querySelectorAll("#kindSeg button").forEach(b => b.onclick = () => {
+  kind = b.dataset.k;
+  document.querySelectorAll("#kindSeg button").forEach(x => x.classList.toggle("on", x === b));
+  $("#filters").style.display = kind === "sfx" ? "none" : "";
+  setMode(mode);
+});
+$("#q").addEventListener("keydown", e => { if (e.key === "Enter") search(); });
+$("#go").onclick = search;
+$("#suggest").onclick = async () => {
+  const text = $("#q").value.trim(); if (!text) { $("#q").focus(); return; }
+  const b = $("#suggest"); b.disabled = true; b.textContent = "✨ pensando…";
+  try { const r = await api("/api/suggest", {text}); renderChips(r.moods); }
+  catch(e) { $("#interp").innerHTML = `<span class="err">${e.message}</span>`; }
+  b.disabled = false; b.textContent = "✨ Sugerir moods";
+};
+
+async function search() {
+  const text = $("#q").value.trim();
+  if (mode === "moods" ? (!moods.size && !text) : !text) { $("#q").focus(); return; }
+  const go = $("#go"); go.disabled = true; go.textContent = "Buscando…";
+  $("#interp").textContent = "O Claude está interpretando o pedido e consultando o catálogo (10–25 s)…";
+  const num = id => $(id).value ? Number($(id).value) : null;
+  try {
+    const r = await api("/api/search", {kind, mode, text, moods:[...moods],
+      filters:{vocals:$("#vocals").value, bpmMin:num("#bpmMin"), bpmMax:num("#bpmMax"), durMin:num("#durMin"), durMax:num("#durMax")}});
+    $("#interp").textContent = r.interpretation || "";
+    renderList(r.tracks);
+  } catch(e) { $("#interp").innerHTML = `<span class="err">Erro: ${e.message}</span>`; }
+  go.disabled = false; go.textContent = "Buscar";
+}
+
+/* ── Lista + waveforms ── */
+function renderList(tracks) {
+  audio.pause(); activeId = null; rows.clear();
+  const list = $("#list"); list.innerHTML = "";
+  if (!tracks.length) { list.innerHTML = '<div class="empty">Nada encontrado. Tente outros termos.</div>'; return; }
+  tracks.forEach(t => list.appendChild(makeRow(t)));
+  queuePeaks([...rows.values()]);
+}
+
+function makeRow(t) {
+  const el = document.createElement("div"); el.className = "track";
+  const sfx = t.kind === "sfx";
+  el.innerHTML = `
+    <div class="art" ${t.artwork?`style="background-image:url('${t.artwork}')"`:""}>${t.artwork?"":(sfx?"🔊":"♪")}</div>
+    <div>
+      <div class="head"><span class="title"></span><span class="meta"></span></div>
+      <div class="range">Trecho: <b class="rg">arquivo inteiro</b></div>
+    </div>
+    <div class="wavewrap"><canvas></canvas></div>
+    <div class="actions">
+      <button class="ghost play">▶ Ouvir</button>
+      <button class="ghost bIn">⟦ In</button><button class="ghost bOut">Out ⟧</button>
+      ${t.hookIn!=null?'<button class="ghost bHook">Usar destaque</button>':''}
+      <button class="ghost bPlaySel" title="Ouve só o trecho In → Out">▶ Trecho</button>
+      <button class="ghost bClr">Limpar</button>
+      <span class="sp"></span>
+      <button class="ghost bPool">Importar no Media Pool</button>
+      <select class="trk" title="Trilha de áudio">${Array.from({length:8},(_,i)=>`<option value="${i+1}">A${i+1}</option>`).join("")}</select>
+      <button class="primary bTl" style="padding:6px 12px;font-size:13px">Inserir no playhead</button>
+    </div>
+    <div class="status"></div>`;
+  el.querySelector(".title").textContent = t.title;
+  el.querySelector(".meta").textContent = [t.artist, t.bpm?`${t.bpm} BPM`:null, t.duration?fmt(t.duration):null].filter(Boolean).join(" · ");
+  const r = {t, el, canvas: el.querySelector("canvas"), peaks: null, dur: t.duration||0, sel: null, st: el.querySelector(".status")};
+  rows.set(t.id, r);
+  r.canvas.addEventListener("mousedown", e => dragStart(r, e));
+  el.querySelector(".play").onclick = () => toggle(r);
+  el.querySelector(".bIn").onclick = () => markIn(r);
+  el.querySelector(".bOut").onclick = () => markOut(r);
+  el.querySelector(".bClr").onclick = () => { r.sel = null; r.playSel = false; refresh(r); };
+  el.querySelector(".bPlaySel").onclick = () => {
+    if (!r.sel) { hint(r, "Marque In e Out primeiro (arraste na waveform ou use I / O enquanto toca)."); return; }
+    r.playSel = true; seek(r, r.sel.in);
+  };
+  el.addEventListener("mouseenter", () => hoverId = t.id);
+  const hk = el.querySelector(".bHook"); if (hk) hk.onclick = () => { r.sel = {in:t.hookIn, out:t.hookOut}; refresh(r); };
+  el.querySelector(".bPool").onclick = () => doImport(r, "pool");
+  el.querySelector(".bTl").onclick = () => doImport(r, "timeline");
+  return el;
+}
+
+let peakQueue = [], peakBusy = 0;
+function queuePeaks(rs) { peakQueue.push(...rs); pump(); }
+function pump() {
+  while (peakBusy < 3 && peakQueue.length) {
+    const r = peakQueue.shift(); peakBusy++;
+    api("/api/peaks?u=" + encodeURIComponent(r.t.audioKey)).then(d => { r.peaks = d.peaks; r.dur = d.duration; draw(r); })
+      .catch(() => {}).finally(() => { peakBusy--; pump(); });
+  }
+}
+const audioSrc = r => "/api/audio?u=" + encodeURIComponent(r.t.audioKey);
+
+function draw(r) {
+  const c = r.canvas, dpr = devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
+  if (c.width !== w*dpr) { c.width = w*dpr; c.height = h*dpr; }
+  const g = c.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,w,h);
+  const dur = r.dur || 1, X = s => s/dur*w;
+  if (r.t.hookIn != null) { g.fillStyle = css("--hook"); g.fillRect(X(r.t.hookIn), 0, X(r.t.hookOut)-X(r.t.hookIn), h); }
+  if (r.sel) { g.fillStyle = css("--sel"); g.fillRect(X(r.sel.in), 0, X(r.sel.out)-X(r.sel.in), h); }
+  const pos = activeId === r.t.id ? audio.currentTime : -1;
+  if (r.peaks) {
+    const n = r.peaks.length, bw = w/n;
+    r.peaks.forEach((p,i) => {
+      const x = i*bw, t = i/n*dur, hh = Math.max(1, p*(h-8));
+      g.fillStyle = (pos >= 0 && t <= pos) ? css("--wave-done") : css("--wave");
+      g.fillRect(x, (h-hh)/2, Math.max(1, bw-0.5), hh);
+    });
+  } else { g.fillStyle = css("--muted"); g.font = "12px system-ui"; g.fillText("carregando waveform…", 10, h/2+4); }
+  if (r.sel) {
+    g.fillStyle = css("--accent"); g.fillRect(X(r.sel.in)-1, 0, 2, h); g.fillRect(X(r.sel.out)-1, 0, 2, h);
+    g.font = "600 10px system-ui"; g.textBaseline = "top";
+    g.textAlign = "left";  g.fillText("IN " + fmt(r.sel.in), Math.min(X(r.sel.in) + 4, w - 70), 3);
+    g.textAlign = "right"; g.fillText("OUT " + fmt(r.sel.out), Math.max(X(r.sel.out) - 4, 70), h - 13);
+    g.textAlign = "left";
+  }
+  if (pos >= 0) { g.fillStyle = css("--text"); g.fillRect(X(pos), 0, 1.5, h); }
+}
+function refresh(r) {
+  r.el.querySelector(".rg").textContent = r.sel ? `${fmt(r.sel.in)} → ${fmt(r.sel.out)}  (${(r.sel.out-r.sel.in).toFixed(1)}s)` : "arquivo inteiro";
+  r.el.querySelector(".bPool").textContent = r.sel ? "Importar trecho no Media Pool" : "Importar no Media Pool";
+  draw(r);
+}
+
+/* ── Player ── */
+function activate(r) {
+  if (activeId && activeId !== r.t.id) { const o = rows.get(activeId); audio.pause(); activeId = null; o.el.classList.remove("active"); o.el.querySelector(".play").textContent = "▶ Ouvir"; draw(o); }
+  if (activeId !== r.t.id) { activeId = r.t.id; audio.src = audioSrc(r); r.el.classList.add("active"); }
+}
+function toggle(r) {
+  activate(r);
+  if (audio.paused) { audio.play(); r.el.querySelector(".play").textContent = "❚❚ Pausar"; }
+  else { audio.pause(); r.el.querySelector(".play").textContent = "▶ Ouvir"; }
+}
+function seek(r, t) { activate(r); const go = () => { audio.currentTime = t; audio.play(); r.el.querySelector(".play").textContent = "❚❚ Pausar"; };
+  audio.readyState >= 1 ? go() : audio.addEventListener("loadedmetadata", go, {once:true}); }
+audio.addEventListener("timeupdate", () => {
+  const r = rows.get(activeId); if (!r) return;
+  if (r.playSel && r.sel && audio.currentTime >= r.sel.out) { audio.pause(); r.playSel = false; r.el.querySelector(".play").textContent = "▶ Ouvir"; }
+  draw(r);
+});
+audio.addEventListener("ended", () => { const r = rows.get(activeId); if (r) { r.el.querySelector(".play").textContent = "▶ Ouvir"; } });
+
+function markIn(r) { activate(r); const t = audio.currentTime || 0; r.sel = {in: t, out: (r.sel && r.sel.out > t) ? r.sel.out : r.dur}; refresh(r); }
+function markOut(r) { activate(r); const t = audio.currentTime || 0; r.sel = {in: (r.sel && r.sel.in < t) ? r.sel.in : 0, out: t}; refresh(r); }
+
+function dragStart(r, e) {
+  const rect = r.canvas.getBoundingClientRect(), t = x => Math.min(r.dur, Math.max(0, (x-rect.left)/rect.width*r.dur));
+  const px = s => rect.left + s / r.dur * rect.width;
+  const x0 = e.clientX, a = t(x0); let moved = false;
+  // perto de uma borda do trecho já marcado? ajusta só aquela borda
+  let edge = null;
+  if (r.sel) {
+    const dIn = Math.abs(x0 - px(r.sel.in)), dOut = Math.abs(x0 - px(r.sel.out));
+    if (Math.min(dIn, dOut) <= 8) edge = dIn <= dOut ? "in" : "out";
+  }
+  const mv = ev => {
+    if (Math.abs(ev.clientX-x0) > 4) moved = true;
+    if (!moved) return;
+    const b = t(ev.clientX);
+    if (edge === "in") r.sel = {in: Math.min(b, r.sel.out - 0.05), out: r.sel.out};
+    else if (edge === "out") r.sel = {in: r.sel.in, out: Math.max(b, r.sel.in + 0.05)};
+    else r.sel = {in: Math.min(a, b), out: Math.max(a, b)};
+    refresh(r);
+  };
+  const up = () => { removeEventListener("mousemove", mv); removeEventListener("mouseup", up); if (!moved) seek(r, a); };
+  addEventListener("mousemove", mv); addEventListener("mouseup", up);
+}
+addEventListener("keydown", e => {
+  if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName) || e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+  const r = rows.get(activeId) || rows.get(hoverId); if (!r) return;
+  if (e.code === "Space") { e.preventDefault(); toggle(r); }
+  else if (e.code === "KeyI" || e.code === "KeyO") {
+    e.preventDefault();
+    if (activeId !== r.t.id || audio.paused && !audio.currentTime) { hint(r, "Dê play (ou clique na waveform) e pressione " + (e.code === "KeyI" ? "I" : "O") + " no ponto desejado."); return; }
+    e.code === "KeyI" ? markIn(r) : markOut(r);
+  }
+});
+addEventListener("resize", () => rows.forEach(draw));
+
+/* ── Importar ── */
+async function doImport(r, target) {
+  const btns = r.el.querySelectorAll("button"); btns.forEach(b => b.disabled = true);
+  r.st.className = "status"; r.st.textContent = "Baixando do Artlist (conta no seu limite diário) e enviando ao Resolve…";
+  try {
+    const out = await api("/api/import", {songId:r.t.songId, kind:r.t.kind, title:r.t.title, target,
+      track:Number(r.el.querySelector(".trk").value), in:r.sel?r.sel.in:null, out:r.sel?r.sel.out:null, previewDuration:r.dur});
+    r.st.className = "status ok"; r.st.textContent = "✓ " + out.message + (out.reusedDownload ? " (arquivo já baixado, sem novo download)" : "") + (out.warning ? "  ⚠ " + out.warning : "");
+  } catch(e) { r.st.className = "status bad"; r.st.textContent = "✗ " + e.message; }
+  btns.forEach(b => b.disabled = false);
+}
+
+/* ── Status do Resolve ── */
+async function poll() {
+  try {
+    const s = await api("/api/status");
+    $("#dot").classList.toggle("on", !!s.running);
+    $("#rstat").textContent = !s.running ? "Resolve fechado" : `${s.project||"sem projeto"} · ${s.timeline||"sem timeline"}${s.timecode?" · "+s.timecode:""}`;
+  } catch { $("#dot").classList.remove("on"); $("#rstat").textContent = "Servidor indisponível"; }
+  setTimeout(poll, 3000);
+}
+renderChips(); setMode("describe"); poll();
+</script>
+</body>
+</html>
