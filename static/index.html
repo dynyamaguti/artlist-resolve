@@ -59,6 +59,13 @@ canvas{width:100%;height:64px;display:block;cursor:crosshair;border-radius:6px;b
 .status{font-size:12.5px;min-height:18px;grid-column:1/-1}
 .status.ok{color:var(--ok)} .status.bad{color:var(--err)}
 .empty{color:var(--muted);text-align:center;padding:40px 0}
+.dhead{display:flex;align-items:center;gap:10px;justify-content:space-between}
+#dlist{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+#dlist li{display:grid;grid-template-columns:20px 1fr;gap:2px 8px;font-size:13px}
+#dlist .ic{font-weight:700}
+#dlist .ok .ic{color:var(--ok)} #dlist .no .ic{color:var(--err)}
+#dlist .det{color:var(--muted)}
+#dlist .fix{grid-column:2;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 9px;user-select:text}
 kbd{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:0 5px;font-size:11px}
 @media (max-width:640px){.track{grid-template-columns:48px 1fr}.art{width:48px;height:48px}}
 </style>
@@ -72,6 +79,10 @@ kbd{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padd
   <div class="pill"><span class="dot" id="dot"></span><span id="rstat">Resolve: verificando…</span></div>
 </header>
 <main>
+  <section class="box" id="doctor" hidden style="margin-bottom:12px">
+    <div class="dhead"><b id="dtitle">Verificando configuração…</b><button class="ghost" id="drecheck">Verificar de novo</button></div>
+    <ul id="dlist"></ul>
+  </section>
   <section class="box">
     <div class="tabs" id="modeTabs">
       <button class="tab on" data-m="describe">Descrever</button>
@@ -163,7 +174,7 @@ async function search() {
       filters:{vocals:$("#vocals").value, bpmMin:num("#bpmMin"), bpmMax:num("#bpmMax"), durMin:num("#durMin"), durMax:num("#durMax")}});
     $("#interp").textContent = r.interpretation || "";
     renderList(r.tracks);
-  } catch(e) { $("#interp").innerHTML = `<span class="err">Erro: ${e.message}</span>`; }
+  } catch(e) { $("#interp").innerHTML = `<span class="err">Erro: ${e.message}</span>`; runDoctor(); }
   go.disabled = false; go.textContent = "Buscar";
 }
 
@@ -328,6 +339,27 @@ async function doImport(r, target) {
   btns.forEach(b => b.disabled = false);
 }
 
+/* ── Diagnóstico de configuração ── */
+async function runDoctor() {
+  const box = $("#doctor"); box.hidden = false; $("#dtitle").textContent = "Verificando configuração…"; $("#drecheck").disabled = true;
+  try {
+    const d = await api("/api/doctor");
+    const ul = $("#dlist"); ul.innerHTML = "";
+    d.checks.forEach(c => {
+      const li = document.createElement("li"); li.className = c.ok ? "ok" : "no";
+      li.innerHTML = `<span class="ic">${c.ok ? "✓" : "✗"}</span><span><b></b> <span class="det"></span></span>`;
+      li.querySelector("b").textContent = c.label; li.querySelector(".det").textContent = c.detail || "";
+      if (!c.ok && c.fix) { const f = document.createElement("div"); f.className = "fix"; f.textContent = c.fix; li.appendChild(f); }
+      ul.appendChild(li);
+    });
+    $("#dtitle").textContent = d.ok ? "✓ Tudo pronto" : "Falta configurar " + d.checks.filter(c => !c.ok).length + " item(ns)";
+    // quando está tudo certo, recolhe a lista depois de alguns segundos
+    if (d.ok) setTimeout(() => { if ($("#dtitle").textContent.startsWith("✓")) box.hidden = true; }, 4000);
+  } catch (e) { $("#dtitle").textContent = "Erro no diagnóstico: " + e.message; }
+  $("#drecheck").disabled = false;
+}
+$("#drecheck").onclick = runDoctor;
+
 /* ── Status do Resolve ── */
 async function poll() {
   try {
@@ -337,7 +369,7 @@ async function poll() {
   } catch { $("#dot").classList.remove("on"); $("#rstat").textContent = "Servidor indisponível"; }
   setTimeout(poll, 3000);
 }
-renderChips(); setMode("describe"); poll();
+renderChips(); setMode("describe"); poll(); runDoctor();
 </script>
 </body>
 </html>
