@@ -3,11 +3,15 @@
 App local para buscar música/SFX do Artlist e mandar direto para o DaVinci Resolve Studio (macOS).
 
 ## Instalar (cada editor, uma vez)
+**Mais fácil: peça ao seu Claude** — veja [INSTALAR-COM-CLAUDE.md](INSTALAR-COM-CLAUDE.md) (é só colar uma mensagem).
+
+Ou manualmente:
 1. Baixe/clone este repositório e dê **duplo clique em `instalar.command`**
    (se o macOS bloquear: clique direito → Abrir).
-   Ele confere Python, ffmpeg e Claude Code CLI, copia o app para
+   Ele confere Python e Claude Code CLI, copia o app para
    `~/Library/Application Support/ArtlistResolve/app` e instala o botão no Resolve.
-2. **Terminal:** rode `claude` e faça login com a sua conta Claude (Pro/Team).
+   Não precisa de ffmpeg nem Homebrew (usa as ferramentas de áudio do próprio macOS).
+2. **Login no Claude:** rode no Terminal `claude auth login` (ou peça ao Claude) e entre com a sua conta (Pro/Team).
 3. **claude.ai → Configurações → Conectores:** conecte o **Artlist** (login da sua conta Artlist).
 4. **Resolve → Preferências → Sistema → Geral → “Uso de script externo” = Local.** Reinicie o Resolve.
 

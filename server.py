@@ -2,12 +2,12 @@
 """Artlist → DaVinci Resolve: servidor local.
 
 - Busca no catálogo Artlist via Claude CLI (conector MCP da sua conta).
-- Serve preview de áudio + waveform (ffmpeg).
+- Serve preview de áudio + waveform (afconvert/afinfo, que já vêm no macOS).
 - Baixa a faixa (download_track conta no limite diário!) e importa no Resolve.
 
 Uso:  python3 server.py   →  http://127.0.0.1:8765
 """
-import glob, hashlib, json, os, re, shutil, subprocess, sys, threading, urllib.parse, urllib.request
+import glob, hashlib, json, os, re, shutil, struct, subprocess, sys, threading, urllib.parse, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from array import array
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -74,8 +74,6 @@ def find_bin(name):
 
 
 CLAUDE = find_bin("claude")
-FFMPEG = find_bin("ffmpeg") or "ffmpeg"
-FFPROBE = find_bin("ffprobe") or "ffprobe"
 
 # Nome das ferramentas do conector Artlist: depende do nome do conector na conta de cada pessoa
 # (ex.: "claude.ai artlist" → mcp__claude_ai_artlist__*). Detectado na primeira busca.
@@ -297,29 +295,61 @@ def cached_audio(url):
         req = urllib.request.Request(url, headers={"User-Agent": "artlist-resolve/1.0"})
         with urllib.request.urlopen(req, timeout=60) as r, open(raw, "wb") as fh:
             shutil.copyfileobj(r, fh)
-        # ADTS cru não tem duração exata no navegador; remux para M4A (sem recodificar) corrige o alinhamento.
+        # ADTS cru não tem duração exata no navegador (estima errado); o M4A tem, e mantém cursor e waveform alinhados.
         tmp = CACHE / f"{key}.tmp.m4a"
-        subprocess.run([FFMPEG, "-y", "-v", "error", "-i", str(raw), "-c:a", "copy", "-movflags", "+faststart", str(tmp)],
-                       check=True)
+        subprocess.run(["afconvert", "-f", "m4af", "-d", "aac", "-b", "256000", str(raw), str(tmp)], check=True)
         tmp.rename(path)
         raw.unlink(missing_ok=True)
     return path
 
 
+def parse_wav(path):
+    """Lê o cabeçalho RIFF/WAVE (aceita WAVE_FORMAT_EXTENSIBLE, que o módulo `wave` do Python pode recusar)."""
+    size = os.path.getsize(path)
+    with open(path, "rb") as f:
+        head = f.read(12)
+        if head[:4] != b"RIFF" or head[8:12] != b"WAVE":
+            return None
+        fmt = None
+        while True:
+            h = f.read(8)
+            if len(h) < 8:
+                return None
+            cid, sz = h[:4], struct.unpack("<I", h[4:])[0]
+            if cid == b"fmt ":
+                fmt = f.read(sz)
+                f.seek(sz & 1, 1)
+            elif cid == b"data":
+                off = f.tell()
+                if fmt is None:
+                    return None
+                sr, byte_rate, block = struct.unpack("<IIH", fmt[4:14])
+                return {"fmt": fmt, "sr": sr, "byte_rate": byte_rate, "block": block,
+                        "off": off, "len": min(sz, size - off)}  # data pode declarar tamanho maior que o arquivo
+            else:
+                f.seek(sz + (sz & 1), 1)
+
+
 def audio_duration(path):
-    out = subprocess.run([FFPROBE, "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
-                         capture_output=True, text=True).stdout.strip()
-    return float(out) if out else 0.0
+    w = parse_wav(path) if str(path).lower().endswith(".wav") else None
+    if w:
+        return w["len"] / w["byte_rate"]
+    out = subprocess.run(["afinfo", str(path)], capture_output=True, text=True).stdout
+    m = re.search(r"estimated duration:\s*([\d.]+)", out)
+    return float(m.group(1)) if m else 0.0
 
 
 def api_peaks(url, n=900):
     path = cached_audio(url)
-    pk = path.with_suffix(".peaks2.json")  # v2: duração via ffprobe do M4A
+    pk = path.with_suffix(".peaks3.json")  # v3: afconvert em vez de ffmpeg
     if pk.exists():
         return json.loads(pk.read_text())
+    tmp = CACHE / (path.stem + ".pk.wav")
     with peaks_sem:
-        raw = subprocess.run([FFMPEG, "-v", "error", "-i", str(path), "-ac", "1", "-ar", "4000", "-f", "s16le", "-"],
-                             capture_output=True).stdout
+        subprocess.run(["afconvert", "-f", "WAVE", "-d", "LEI16@4000", "-c", "1", str(path), str(tmp)], check=True)
+    w = parse_wav(str(tmp))
+    raw = tmp.read_bytes()[w["off"]: w["off"] + w["len"]]
+    tmp.unlink(missing_ok=True)
     a = array("h")
     a.frombytes(raw[: len(raw) // 2 * 2])
     step = max(1, len(a) // n)
@@ -374,8 +404,26 @@ def download_licensed(song_id, kind, title):
 def cut_segment(src, t_in, t_out, title):
     tag = f"[{int(t_in // 60)}m{t_in % 60:04.1f}s-{int(t_out // 60)}m{t_out % 60:04.1f}s]"
     dest = ensure_downloads() / "trechos" / f"{safe_name(title)} {tag}.wav"
-    subprocess.run([FFMPEG, "-y", "-v", "error", "-ss", f"{t_in:.3f}", "-t", f"{t_out - t_in:.3f}", "-i", str(src),
-                    "-c:a", "pcm_s24le", str(dest)], check=True)
+    src = Path(src)
+    w = parse_wav(str(src))
+    conv = None
+    if not w:  # não é WAV (ex.: MP3 de conta sem assinatura): converte para WAV 24 bits antes de cortar
+        conv = CACHE / (src.stem + ".conv.wav")
+        subprocess.run(["afconvert", "-f", "WAVE", "-d", "LEI24", str(src), str(conv)], check=True)
+        src, w = conv, parse_wav(str(conv))
+    # Corte por amostra no próprio WAV: preserva formato, taxa e bits do arquivo do Artlist (sem recodificar).
+    total = w["len"] // w["block"]
+    start = min(total, max(0, round(t_in * w["sr"])))
+    count = min(total - start, max(1, round((t_out - t_in) * w["sr"])))
+    with open(src, "rb") as f:
+        f.seek(w["off"] + start * w["block"])
+        data = f.read(count * w["block"])
+    fmt = w["fmt"]
+    body = (b"WAVE" + b"fmt " + struct.pack("<I", len(fmt)) + fmt + (b"\0" if len(fmt) & 1 else b"")
+            + b"data" + struct.pack("<I", len(data)) + data + (b"\0" if len(data) & 1 else b""))
+    dest.write_bytes(b"RIFF" + struct.pack("<I", len(body)) + body)
+    if conv:
+        conv.unlink(missing_ok=True)
     return dest
 
 
@@ -511,7 +559,7 @@ def api_doctor():
         except ValueError:
             ok = False
         return dict(id="login", ok=ok, label="Login no Claude", detail="conectado" if ok else "sem login",
-                    fix="" if ok else "No Terminal rode: claude — e faça login com a sua conta do Claude (Pro/Team).")
+                    fix="" if ok else "Faça login com a sua conta do Claude (Pro/Team): peça ao Claude “faça o login do Claude CLI” ou rode no Terminal: claude auth login")
 
     def connector():
         name, status = detect_artlist()
@@ -524,10 +572,10 @@ def api_doctor():
         return dict(id="artlist", ok=ok, label="Conector Artlist", detail=f"{name}: {status}",
                     fix="" if ok else "Em claude.ai → Configurações → Conectores, conecte o Artlist (login da sua conta Artlist).")
 
-    def ffmpeg():
-        ok = bool(find_bin("ffmpeg")) and bool(find_bin("ffprobe"))
-        return dict(id="ffmpeg", ok=ok, label="ffmpeg", detail="ok" if ok else "não encontrado",
-                    fix="" if ok else "No Terminal: brew install ffmpeg (ou rode o instalar.command).")
+    def audio_tools():  # vêm com o macOS; só falham em instalações incomuns
+        ok = bool(shutil.which("afconvert")) and bool(shutil.which("afinfo"))
+        return dict(id="audio", ok=ok, label="Ferramentas de áudio do macOS", detail="ok" if ok else "afconvert não encontrado",
+                    fix="" if ok else "Este app precisa do macOS (afconvert/afinfo).")
 
     def resolve():
         s = api_status()
@@ -542,7 +590,7 @@ def api_doctor():
                     fix="Abra o DaVinci Resolve Studio com um projeto (a busca funciona sem ele, a importação não).")
 
     with ThreadPoolExecutor(5) as ex:
-        futs = [ex.submit(f) for f in (claude_cli, login, connector, ffmpeg, resolve)]
+        futs = [ex.submit(f) for f in (claude_cli, login, connector, audio_tools, resolve)]
         checks = []
         for f in futs:
             try:
