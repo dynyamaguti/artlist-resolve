@@ -25,7 +25,7 @@ Faça nesta ordem:
 
 4. Confira se há login do Claude CLI salvo neste Mac: `security find-generic-password -s "Claude Code-credentials" >/dev/null 2>&1 && echo ok || echo sem-login`. Se der "sem-login", rode `claude auth login` e me peça para concluir o login no navegador que vai abrir. (Não use `claude auth status` como prova: dentro do app Claude ele pode aparecer logado mesmo sem login salvo.)
 
-5. Abra https://claude.ai com `open` e me peça para ir em Configurações → Conectores e conectar o **Artlist** com a MINHA conta Artlist; espere eu confirmar.
+5. Abra https://claude.ai com `open` e me peça para: (a) ir em Configurações → Conectores e conectar o **Artlist** com a MINHA conta Artlist; (b) abrir o conector Artlist (Configurações → Conectores → Artlist), rolar até a lista de ferramentas e deixar em "Permitir" (ícone ✓, o primeiro de cada linha) estas ferramentas: "Search Artlist music catalog", "Search Artlist SFX catalog", "Get Artlist track details" e a de download da faixa — sem isso a busca e a importação falham, porque o app roda sem ninguém para aprovar cada uso. Espere eu confirmar.
 
 6. Me peça para: abrir o DaVinci Resolve Studio → Preferências → Sistema → Geral → "Uso de script externo" = Local; depois fechar o Resolve por completo (⌘Q) e abrir de novo com um projeto e uma timeline.
 

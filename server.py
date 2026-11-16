@@ -565,12 +565,12 @@ def api_doctor():
         name, status = detect_artlist()
         if not name:
             return dict(id="artlist", ok=False, label="Conector Artlist", detail=status,
-                        fix="Em claude.ai → Configurações → Conectores, adicione e conecte o Artlist.")
+                        fix="Em claude.ai → Configurações → Conectores, adicione e conecte o Artlist; depois deixe em “Permitir” (✓) as ferramentas de busca (músicas e SFX), detalhes da faixa e download.")
         ok = "connected" in status.lower() and "needs" not in status.lower()
         if ok:
             ensure_prefix()
         return dict(id="artlist", ok=ok, label="Conector Artlist", detail=f"{name}: {status}",
-                    fix="" if ok else "Em claude.ai → Configurações → Conectores, conecte o Artlist (login da sua conta Artlist).")
+                    fix="" if ok else "Em claude.ai → Configurações → Conectores, conecte o Artlist (login da sua conta Artlist) e deixe em “Permitir” (✓) as ferramentas de busca, detalhes da faixa e download.")
 
     def audio_tools():  # vêm com o macOS; só falham em instalações incomuns
         ok = bool(shutil.which("afconvert")) and bool(shutil.which("afinfo"))

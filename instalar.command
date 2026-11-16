@@ -97,7 +97,8 @@ fi
 
 print -P "\n%F{green}%BInstalado.%b%f Falta só (uma vez):"
 print "  1. Login no Claude com a sua conta (Pro/Team), se ainda não fez."
-print "  2. claude.ai ▸ Configurações ▸ Conectores: conecte o Artlist."
+print "  2. claude.ai ▸ Configurações ▸ Conectores: conecte o Artlist e deixe em “Permitir” (✓) as"
+print "     ferramentas de busca de músicas, busca de SFX, detalhes da faixa e download."
 print "  3. Resolve ▸ Preferências ▸ Sistema ▸ Geral ▸ “Uso de script externo” = Local. Reinicie o Resolve."
 print "  4. Use: Resolve ▸ Workspace ▸ Workflow Integrations ▸ Artlist Search (painel) ou"
 print "     Workspace ▸ Scripts ▸ Artlist (navegador). A tela mostra o que ainda faltar."

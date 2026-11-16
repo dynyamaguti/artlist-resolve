@@ -12,7 +12,10 @@ Ou manualmente:
    `~/Library/Application Support/ArtlistResolve/app` e instala o botão no Resolve.
    Não precisa de ffmpeg nem Homebrew (usa as ferramentas de áudio do próprio macOS).
 2. **Login no Claude:** rode no Terminal `claude auth login` (ou peça ao Claude) e entre com a sua conta (Pro/Team).
-3. **claude.ai → Configurações → Conectores:** conecte o **Artlist** (login da sua conta Artlist).
+3. **claude.ai → Configurações → Conectores:** conecte o **Artlist** (login da sua conta Artlist) e,
+   dentro do conector, deixe em **Permitir** (ícone ✓) as ferramentas de **busca de músicas**, **busca de SFX**,
+   **detalhes da faixa** e **download**. Se ficarem em "pedir aprovação" ou "bloquear", a busca e a importação falham,
+   porque o app roda sem ninguém para aprovar cada uso. (O download só acontece quando você clica em importar.)
 4. **Resolve → Preferências → Sistema → Geral → “Uso de script externo” = Local.** Reinicie o Resolve.
 
 ## Usar
