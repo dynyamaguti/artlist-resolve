@@ -48,11 +48,28 @@ mkdir -p "$DEST" && cp -R "$SRC/server.py" "$SRC/static" "$SRC/README.md" "$DEST
 step "Botão dentro do DaVinci Resolve"
 mkdir -p "$RES" && cp "$SRC/resolve/Artlist.py" "$RES/Artlist.py" && ok "Workspace ▸ Scripts ▸ Artlist (reinicie o Resolve se ele estiver aberto)"
 
+step "Painel dentro do Resolve (Workspace ▸ Workflow Integrations ▸ Artlist Search)"
+PLG="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Workflow Integration Plugins"
+PID="com.trendsy.artlistsearch"
+WI_NODE="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Workflow Integrations/Examples/SamplePlugin/WorkflowIntegration.node"
+if [[ ! -d "$PLG" ]]; then
+  warn "Pasta de plugins do Resolve não encontrada (Resolve Studio instalado?). Pulando — o botão do menu Scripts continua valendo."
+elif ask "Instalar o painel flutuante dentro do Resolve? (pede a senha do Mac)"; then
+  sudo mkdir -p "$PLG/$PID" \
+    && sudo cp -R "$SRC/resolve/plugin/$PID/." "$PLG/$PID/" \
+    && { [[ -f "$WI_NODE" ]] && sudo cp "$WI_NODE" "$PLG/$PID/" || true; } \
+    && ok "Instalado. Reinicie o Resolve: Workspace ▸ Workflow Integrations ▸ Artlist Search" \
+    || warn "Não foi possível instalar o painel (senha negada?). O botão do menu Scripts continua valendo."
+else
+  print "  Pulado. O botão do menu Scripts continua valendo."
+fi
+
 print -P "\n%F{green}%BInstalado.%b%f Falta só (uma vez):"
 print "  1. Terminal: rode  claude  e faça login com a sua conta Claude (se ainda não fez)."
 print "  2. claude.ai ▸ Configurações ▸ Conectores: conecte o Artlist."
 print "  3. Resolve ▸ Preferências ▸ Sistema ▸ Geral ▸ “Uso de script externo” = Local."
-print "  4. Use: Resolve ▸ Workspace ▸ Scripts ▸ Artlist. A tela mostra o que ainda faltar."
+print "  4. Use: Resolve ▸ Workspace ▸ Workflow Integrations ▸ Artlist Search (painel) ou"
+print "     Workspace ▸ Scripts ▸ Artlist (navegador). A tela mostra o que ainda faltar."
 print "  Downloads ficam em: ~/Music/Artlist-Resolve"
 
 if ask "Abrir o app agora?"; then

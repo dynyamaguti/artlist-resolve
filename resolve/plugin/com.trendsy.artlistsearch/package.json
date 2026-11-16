@@ -1,0 +1,6 @@
+{
+    "name": "artlist-search",
+    "version": "1.0.0",
+    "description": "Painel do Resolve para o app Artlist → Resolve",
+    "main": "main.js"
+}
