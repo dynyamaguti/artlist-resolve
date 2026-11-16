@@ -17,9 +17,43 @@ HERE = Path(__file__).resolve().parent
 # Dados por usuário (cada editor tem os seus; nada disso vai para o repositório).
 DATA_DIR = Path(os.environ.get("ARTLIST_HOME", Path.home() / "Library/Application Support/ArtlistResolve"))
 CACHE = DATA_DIR / "cache"
-DOWNLOADS = Path(os.environ.get("ARTLIST_DOWNLOADS", Path.home() / "Music/Artlist-Resolve"))
-for d in (CACHE, DOWNLOADS, DOWNLOADS / "trechos"):
-    d.mkdir(parents=True, exist_ok=True)
+CACHE.mkdir(parents=True, exist_ok=True)
+CONFIG_PATH = DATA_DIR / "config.json"
+INDEX_PATH = DATA_DIR / "downloads-index.json"  # faixa já baixada → arquivo (vale em qualquer pasta)
+DEFAULT_DOWNLOADS = Path(os.environ.get("ARTLIST_DOWNLOADS", Path.home() / "Music/Artlist-Resolve"))
+
+
+def load_config():
+    try:
+        return json.loads(CONFIG_PATH.read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def get_downloads():
+    """Pasta de downloads escolhida pelo editor (config.json) ou o padrão."""
+    p = load_config().get("downloads")
+    return Path(p) if p else DEFAULT_DOWNLOADS
+
+
+def ensure_downloads():
+    d = get_downloads()
+    try:
+        (d / "trechos").mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        raise RuntimeError(f"Pasta de downloads indisponível ({d}): {e.strerror or e}. "
+                           "Escolha outra em “Alterar pasta” (o disco está conectado?).")
+    return d
+
+
+def load_index():
+    idx = {}
+    for p in (get_downloads() / "index.json", DEFAULT_DOWNLOADS / "index.json", INDEX_PATH):  # o global vence
+        try:
+            idx.update(json.loads(p.read_text()))
+        except (OSError, ValueError):
+            pass
+    return idx
 
 PORT = int(os.environ.get("PORT", "8765"))
 MODEL = os.environ.get("ARTLIST_MODEL", "haiku")
@@ -304,11 +338,11 @@ def safe_name(s):
 def download_licensed(song_id, kind, title):
     """Baixa via download_track (conta no limite diário). Reutiliza arquivo se já baixado."""
     with dl_lock:
-        idx_path = DOWNLOADS / "index.json"
-        idx = json.loads(idx_path.read_text()) if idx_path.exists() else {}
+        idx = load_index()
         key = f"{kind}:{song_id}"
         if key in idx and Path(idx[key]).exists():
             return Path(idx[key]), True
+        folder = ensure_downloads()
         ensure_prefix()
         prompt = (
             f"Chame a ferramenta {T_DL} (conector Artlist, não Envato) com songId '{song_id}', kind '{kind}' e "
@@ -329,17 +363,17 @@ def download_licensed(song_id, kind, title):
                 ext = "." + mm.group(1).lower()
             elif "mpeg" in ctype:
                 ext = ".mp3"
-            dest = DOWNLOADS / f"{safe_name(title)} ({song_id}){ext}"
+            dest = folder / f"{safe_name(title)} ({song_id}){ext}"
             with open(dest, "wb") as fh:
                 shutil.copyfileobj(r, fh)
         idx[key] = str(dest)
-        idx_path.write_text(json.dumps(idx, indent=1))
+        INDEX_PATH.write_text(json.dumps(idx, indent=1))
         return dest, False
 
 
 def cut_segment(src, t_in, t_out, title):
     tag = f"[{int(t_in // 60)}m{t_in % 60:04.1f}s-{int(t_out // 60)}m{t_out % 60:04.1f}s]"
-    dest = DOWNLOADS / "trechos" / f"{safe_name(title)} {tag}.wav"
+    dest = ensure_downloads() / "trechos" / f"{safe_name(title)} {tag}.wav"
     subprocess.run([FFMPEG, "-y", "-v", "error", "-ss", f"{t_in:.3f}", "-t", f"{t_out - t_in:.3f}", "-i", str(src),
                     "-c:a", "pcm_s24le", str(dest)], check=True)
     return dest
@@ -515,7 +549,67 @@ def api_doctor():
                 checks.append(f.result())
             except Exception as e:
                 checks.append(dict(id="erro", ok=False, label="Verificação", detail=str(e), fix=""))
-    return {"checks": checks, "ok": all(c["ok"] for c in checks), "downloads": str(DOWNLOADS)}
+    return {"checks": checks, "ok": all(c["ok"] for c in checks), "downloads": str(get_downloads())}
+
+
+# ───────────────────────── Configuração (pasta de downloads) ─────────────────────────
+def api_get_config():
+    d = get_downloads()
+    return {"downloads": str(d), "default": str(DEFAULT_DOWNLOADS), "isDefault": d == DEFAULT_DOWNLOADS,
+            "exists": d.is_dir()}
+
+
+def api_set_config(body):
+    raw = str(body.get("downloads") or "").strip()
+    if not raw:  # vazio = volta ao padrão
+        cfg = load_config()
+        cfg.pop("downloads", None)
+        CONFIG_PATH.write_text(json.dumps(cfg, indent=1))
+        return api_get_config()
+    p = Path(raw).expanduser()
+    if not p.is_absolute():
+        raise ValueError("Informe um caminho completo (começando com / ou ~).")
+    p = Path(os.path.realpath(p))
+    home = Path.home()
+    ok_root = home in p.parents or (len(p.parts) > 2 and p.parts[1] == "Volumes")
+    if not ok_root or p == home or p == Path("/Volumes"):
+        raise ValueError("Escolha uma pasta dentro da sua pasta pessoal ou de um disco em /Volumes.")
+    try:
+        (p / "trechos").mkdir(parents=True, exist_ok=True)
+        probe = p / ".artlist-write-test"
+        probe.write_text("ok")
+        probe.unlink()
+    except OSError as e:
+        raise ValueError(f"Não consigo gravar nessa pasta: {e.strerror or e}")
+    cfg = load_config()
+    cfg["downloads"] = str(p)
+    CONFIG_PATH.write_text(json.dumps(cfg, indent=1))
+    return api_get_config()
+
+
+def api_choose_folder(_body):
+    """Abre o seletor de pastas nativo do macOS (o servidor roda no Mac do próprio editor)."""
+    start = get_downloads()
+    start = start if start.is_dir() else Path.home()
+    start = str(start).replace("\\", "\\\\").replace('"', '\\"')  # vai dentro de uma string do AppleScript
+    script = [
+        'tell application "System Events"', "activate",
+        f'set f to choose folder with prompt "Pasta para salvar os downloads do Artlist" default location (POSIX file "{start}")',
+        "POSIX path of f", "end tell",
+    ]
+    cmd = ["osascript"] + [x for line in script for x in ("-e", line)]
+    p = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    if p.returncode != 0:
+        if "-128" in p.stderr:  # usuário cancelou
+            return {"cancelled": True}
+        raise RuntimeError("Não foi possível abrir o seletor de pastas: " + p.stderr.strip()[:200])
+    return {"path": p.stdout.strip().rstrip("/")}
+
+
+def api_reveal_downloads(_body):
+    d = ensure_downloads()
+    subprocess.run(["open", str(d)], check=False)
+    return {"ok": True}
 
 
 # ───────────────────────── HTTP ─────────────────────────
@@ -559,6 +653,8 @@ class H(BaseHTTPRequestHandler):
                 self._json(api_status())
             elif u.path == "/api/doctor":
                 self._json(api_doctor())
+            elif u.path == "/api/config":
+                self._json(api_get_config())
             elif u.path == "/api/peaks":
                 self._json(api_peaks(q["u"][0]))
             elif u.path == "/api/audio":
@@ -605,7 +701,9 @@ class H(BaseHTTPRequestHandler):
             return self._json({"error": "origem não permitida"}, 403)
         try:
             body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
-            fn = {"/api/search": api_search, "/api/suggest": api_suggest, "/api/import": api_import}.get(self.path)
+            fn = {"/api/search": api_search, "/api/suggest": api_suggest, "/api/import": api_import,
+                  "/api/config": api_set_config, "/api/choose-folder": api_choose_folder,
+                  "/api/reveal-downloads": api_reveal_downloads}.get(self.path)
             if not fn:
                 return self._json({"error": "not found"}, 404)
             self._json(fn(body))
@@ -615,7 +713,7 @@ class H(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     srv = ThreadingHTTPServer(("127.0.0.1", PORT), H)
-    print(f"Artlist → Resolve em http://127.0.0.1:{PORT}  (downloads em {DOWNLOADS})")
+    print(f"Artlist → Resolve em http://127.0.0.1:{PORT}  (downloads em {get_downloads()})")
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

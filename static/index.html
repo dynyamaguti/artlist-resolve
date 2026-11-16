@@ -59,6 +59,8 @@ canvas{width:100%;height:64px;display:block;cursor:crosshair;border-radius:6px;b
 .status{font-size:12.5px;min-height:18px;grid-column:1/-1}
 .status.ok{color:var(--ok)} .status.bad{color:var(--err)}
 .empty{color:var(--muted);text-align:center;padding:40px 0}
+.dlrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px}
+.dlrow code{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 8px;overflow-wrap:anywhere;user-select:text}
 .dhead{display:flex;align-items:center;gap:10px;justify-content:space-between}
 #dlist{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
 #dlist li{display:grid;grid-template-columns:20px 1fr;gap:2px 8px;font-size:13px}
@@ -101,6 +103,13 @@ kbd{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padd
       <label>Vocal <select id="vocals"><option value="ANY">qualquer</option><option value="INSTRUMENTAL">instrumental</option><option value="VOCAL">com voz</option></select></label>
       <label>BPM <input type="number" id="bpmMin" placeholder="mín"> – <input type="number" id="bpmMax" placeholder="máx"></label>
       <label>Duração (s) <input type="number" id="durMin" placeholder="mín"> – <input type="number" id="durMax" placeholder="máx"></label>
+    </div>
+    <div class="dlrow">
+      <span class="meta">📁 Downloads:</span> <code id="dlpath">…</code>
+      <button class="ghost" id="dlChange">Alterar pasta…</button>
+      <button class="ghost" id="dlOpen">Abrir</button>
+      <button class="ghost" id="dlReset" hidden>Padrão</button>
+      <span id="dlmsg" class="meta"></span>
     </div>
   </section>
 
@@ -339,6 +348,26 @@ async function doImport(r, target) {
   btns.forEach(b => b.disabled = false);
 }
 
+/* ── Pasta de downloads ── */
+function showCfg(c) {
+  $("#dlpath").textContent = c.downloads; $("#dlpath").title = c.downloads;
+  $("#dlReset").hidden = c.isDefault;
+  $("#dlmsg").textContent = c.exists ? "" : "(a pasta será criada no primeiro download)";
+}
+async function loadCfg() { try { showCfg(await api("/api/config")); } catch (e) { $("#dlmsg").textContent = e.message; } }
+function dlNote(msg, bad) { const m = $("#dlmsg"); m.textContent = msg; m.className = "meta" + (bad ? " err" : ""); }
+$("#dlChange").onclick = async () => {
+  const b = $("#dlChange"); b.disabled = true; dlNote("Escolha a pasta na janela do macOS…");
+  try {
+    const r = await api("/api/choose-folder", {});
+    if (r.cancelled) { dlNote(""); }
+    else { showCfg(await api("/api/config", {downloads: r.path})); dlNote("✓ Salvo. Os próximos downloads vão para essa pasta."); }
+  } catch (e) { dlNote(e.message, true); }
+  b.disabled = false;
+};
+$("#dlReset").onclick = async () => { try { showCfg(await api("/api/config", {downloads: ""})); dlNote("Voltou para a pasta padrão."); } catch (e) { dlNote(e.message, true); } };
+$("#dlOpen").onclick = async () => { try { await api("/api/reveal-downloads", {}); } catch (e) { dlNote(e.message, true); } };
+
 /* ── Diagnóstico de configuração ── */
 async function runDoctor() {
   const box = $("#doctor"); box.hidden = false; $("#dtitle").textContent = "Verificando configuração…"; $("#drecheck").disabled = true;
@@ -369,7 +398,7 @@ async function poll() {
   } catch { $("#dot").classList.remove("on"); $("#rstat").textContent = "Servidor indisponível"; }
   setTimeout(poll, 3000);
 }
-renderChips(); setMode("describe"); poll(); runDoctor();
+renderChips(); setMode("describe"); poll(); runDoctor(); loadCfg();
 </script>
 </body>
 </html>
