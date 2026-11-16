@@ -3,7 +3,9 @@
 App local para buscar música/SFX do Artlist e mandar direto para o DaVinci Resolve Studio (macOS).
 
 ## Instalar (cada editor, uma vez)
-**Mais fácil: peça ao seu Claude** — veja [INSTALAR-COM-CLAUDE.md](INSTALAR-COM-CLAUDE.md) (é só colar uma mensagem).
+**Mais fácil: deixe o seu Claude instalar.** Baixe [INSTALAR-COM-CLAUDE.md](INSTALAR-COM-CLAUDE.md), arraste o arquivo para o
+Claude (aba **Code**) e escreva "siga este arquivo". Ele instala e te guia no que só você pode fazer (senha, login, conector).
+Para atualizar depois, arraste de novo e escreva "atualizar".
 
 Ou manualmente:
 1. Baixe/clone este repositório e dê **duplo clique em `instalar.command`**
