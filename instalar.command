@@ -10,7 +10,7 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$HOME/.claude/loc
 step() { print -P "\n%F{yellow}▸%f %B$*%b"; }
 ok()   { print -P "  %F{green}✓%f $*"; }
 warn() { print -P "  %F{red}✗%f $*"; }
-ask()  { local r; read -q "r?  $1 [s/N] "; local rc=$?; print; return $rc; }
+ask()  { local r; print -n "  $1 [s/N] (digite s e Enter) "; read -r r; [[ "$r" == [sSyY]* ]]; }  # s/S/y/Y = sim
 
 [[ "$(uname)" == "Darwin" ]] || { warn "Este instalador é só para macOS."; exit 1; }
 
