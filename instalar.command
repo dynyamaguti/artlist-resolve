@@ -55,9 +55,15 @@ WI_NODE="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Develope
 if [[ ! -d "$PLG" ]]; then
   warn "Pasta de plugins do Resolve não encontrada (Resolve Studio instalado?). Pulando — o botão do menu Scripts continua valendo."
 elif ask "Instalar o painel flutuante dentro do Resolve? (pede a senha do Mac)"; then
+  # Permissões 755/644: o Resolve roda como o usuário e precisa LER os arquivos (o cp de um disco externo
+  # deixava tudo 700 do root e o plugin não aparecia). Copia só os 3 arquivos pelo nome (sem os ._* do disco).
+  PSRC="$SRC/resolve/plugin/$PID"
   sudo mkdir -p "$PLG/$PID" \
-    && sudo cp -R "$SRC/resolve/plugin/$PID/." "$PLG/$PID/" \
+    && sudo cp "$PSRC/main.js" "$PSRC/manifest.xml" "$PSRC/package.json" "$PLG/$PID/" \
     && { [[ -f "$WI_NODE" ]] && sudo cp "$WI_NODE" "$PLG/$PID/" || true; } \
+    && sudo find "$PLG/$PID" -maxdepth 1 -name '._*' -delete \
+    && sudo chmod 755 "$PLG/$PID" \
+    && sudo chmod 644 "$PLG/$PID"/* \
     && ok "Instalado. Reinicie o Resolve: Workspace ▸ Workflow Integrations ▸ Artlist Search" \
     || warn "Não foi possível instalar o painel (senha negada?). O botão do menu Scripts continua valendo."
 else
