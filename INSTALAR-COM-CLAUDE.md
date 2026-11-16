@@ -3,8 +3,8 @@
 Para o editor: abra o app **Claude** (aba **Code**), abra uma pasta qualquer (ex.: a sua pasta pessoal) e **cole a mensagem abaixo**.
 O Claude instala o app e te guia nos passos que só você pode fazer (senha, login, conector).
 
-> **Quem distribui:** antes, dê acesso ao repositório (GitHub → Settings → Collaborators) para o editor,
-> e confirme que ele tem Resolve **Studio**, Claude Pro/Team e conta Artlist.
+> **Quem distribui:** o repositório é público, então não precisa de convite. Só confirme que o editor tem
+> Resolve **Studio**, Claude Pro/Team e conta Artlist (cada um usa o próprio plano e licença do Artlist).
 
 ---
 
@@ -13,11 +13,11 @@ O Claude instala o app e te guia nos passos que só você pode fazer (senha, log
 ```
 Instale o app "Artlist → Resolve" neste Mac e me guie nos passos que dependem de mim.
 
-Repositório: https://github.com/dynyamaguti/artlist-resolve (privado; se eu não tiver acesso, me avise e pare).
+Repositório (público): https://github.com/dynyamaguti/artlist-resolve
 
 Faça nesta ordem:
 
-1. Baixe para ~/ArtlistResolve: tente `gh repo clone dynyamaguti/artlist-resolve ~/ArtlistResolve`; se o gh não existir ou falhar, tente `git clone https://github.com/dynyamaguti/artlist-resolve.git ~/ArtlistResolve`. Se a pasta já existir, rode `git -C ~/ArtlistResolve pull`. Se der erro de acesso, me diga que preciso pedir o convite do repositório e pare.
+1. Baixe para ~/ArtlistResolve: tente `gh repo clone dynyamaguti/artlist-resolve ~/ArtlistResolve`; se o gh não existir ou falhar, tente `git clone https://github.com/dynyamaguti/artlist-resolve.git ~/ArtlistResolve`. Se a pasta já existir, rode `git -C ~/ArtlistResolve pull`. Se o download falhar, me diga o erro e pare.
 
 2. Leia o README.md dessa pasta.
 
