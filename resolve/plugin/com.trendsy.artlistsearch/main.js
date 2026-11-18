@@ -1,4 +1,4 @@
-// Workflow Integration plugin: abre o dashboard do app Artlist → Resolve numa janela do Resolve.
+// Workflow Integration plugin: abre o dashboard do app Busca Busca Trilhas e SFX numa janela do Resolve.
 // A janela só mostra http://127.0.0.1:8765 (servidor local); a busca e a inserção na timeline
 // acontecem no servidor (conector Artlist do Claude + scripting do Resolve).
 const { app, BrowserWindow, Menu, shell } = require('electron');
@@ -55,7 +55,7 @@ let win = null;
 async function createWindow() {
     win = new BrowserWindow({
         width: 560, height: 900, minWidth: 420, minHeight: 500,
-        title: 'Artlist', backgroundColor: '#141517',
+        title: 'Busca Busca Trilhas e SFX', backgroundColor: '#141517',
         webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false },
     });
     win.setAlwaysOnTop(true, 'floating'); // painel fica por cima do Resolve (menu Janela → Fixar no topo)
@@ -76,7 +76,7 @@ async function createWindow() {
 
 function buildMenu() {
     Menu.setApplicationMenu(Menu.buildFromTemplate([
-        { label: 'Artlist', submenu: [{ role: 'about' }, { type: 'separator' }, { role: 'quit' }] },
+        { label: 'Busca Busca Trilhas e SFX', submenu: [{ role: 'about' }, { type: 'separator' }, { role: 'quit' }] },
         { label: 'Editar', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
         { label: 'Janela', submenu: [
             { label: 'Fixar no topo', type: 'checkbox', checked: true, click: (i) => win && win.setAlwaysOnTop(i.checked, 'floating') },

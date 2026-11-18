@@ -1,4 +1,4 @@
-# Artlist → Resolve
+# Busca Busca Trilhas e SFX
 
 App local para buscar música/SFX do Artlist e mandar direto para o DaVinci Resolve Studio (macOS).
 
@@ -21,10 +21,10 @@ Ou manualmente:
 4. **Resolve → Preferências → Sistema → Geral → “Uso de script externo” = Local.** Reinicie o Resolve.
 
 ## Usar
-- **Painel:** **Resolve → Workspace → Workflow Integrations → Artlist Search** abre o dashboard numa janela
+- **Painel:** **Resolve → Workspace → Workflow Integrations → Busca Busca Trilhas e SFX** abre o dashboard numa janela
   flutuante do Resolve (menu *Janela → Fixar no topo* liga/desliga). Fecha junto com o Resolve.
   O instalador pede a senha do Mac porque a pasta de plugins do Resolve é protegida.
-- **Navegador:** **Workspace → Scripts → Artlist** abre o mesmo dashboard no navegador.
+- **Navegador:** **Workspace → Scripts → Busca Busca Trilhas e SFX** abre o mesmo dashboard no navegador.
 
 Ambos sobem o servidor local se ele ainda não estiver rodando.
 No topo da página, o painel de diagnóstico mostra o que ainda falta configurar.

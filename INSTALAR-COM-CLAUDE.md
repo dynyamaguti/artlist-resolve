@@ -1,6 +1,6 @@
-# Instalar o "Artlist → Resolve" (instruções para o Claude)
+# Instalar o app "Busca Busca Trilhas e SFX" (instruções para o Claude)
 
-**Claude: o usuário anexou este arquivo para você instalar o app "Artlist → Resolve" no Mac dele e guiá-lo nos passos
+**Claude: o usuário anexou este arquivo para você instalar o app "Busca Busca Trilhas e SFX" no Mac dele e guiá-lo nos passos
 que dependem dele.** Siga as instruções abaixo, na ordem. Rode você mesmo os comandos (o usuário aprova os pedidos de
 permissão do app) e, entre os passos, diga em uma frase curta o que foi feito e o que vem a seguir. Fale em português.
 
@@ -26,7 +26,7 @@ Artlist são dele. Código: https://github.com/dynyamaguti/artlist-resolve
 **2. Baixar o app.** Rode `git clone https://github.com/dynyamaguti/artlist-resolve.git ~/ArtlistResolve` (se a pasta já existir, `git -C ~/ArtlistResolve pull`). O repositório é público. Se o `git` pedir para instalar as Command Line Tools, deixe o usuário concluir a janela da Apple e tente de novo.
 
 **3. Instalar.** Rode `cd ~/ArtlistResolve && zsh ./instalar.command --sim`.
-Avise o usuário antes: **uma janela do macOS vai pedir a senha de administrador** para instalar o painel no Resolve, e ele mesmo a digita. Se ele cancelar ou não for administrador, rode de novo com `zsh ./instalar.command --sim --sem-painel` (o app funcionará pelo menu *Workspace → Scripts → Artlist*, sem o painel flutuante).
+Avise o usuário antes: **uma janela do macOS vai pedir a senha de administrador** para instalar o painel no Resolve, e ele mesmo a digita. Se ele cancelar ou não for administrador, rode de novo com `zsh ./instalar.command --sim --sem-painel` (o app funcionará pelo menu *Workspace → Scripts → Busca Busca Trilhas e SFX*, sem o painel flutuante).
 
 **4. Login do Claude CLI.** Rode `security find-generic-password -s "Claude Code-credentials" >/dev/null 2>&1 && echo ok || echo sem-login`.
 Se der `sem-login`, rode `claude auth login` e peça ao usuário para concluir o login no navegador que vai abrir (é a conta Claude Pro/Team dele). Não use `claude auth status` como prova: dentro do app Claude ele pode aparecer logado mesmo sem login salvo para o painel.
@@ -40,7 +40,7 @@ Se der `sem-login`, rode `claude auth login` e peça ao usuário para concluir o
   a. Abrir o DaVinci Resolve Studio → *Preferências → Sistema → Geral* → **"Uso de script externo" = Local** → Salvar.
   b. Fechar o Resolve por completo (⌘Q) e abrir de novo, com um projeto e uma timeline.
 
-**7. Abrir o painel.** Peça para ir em **Workspace → Workflow Integrations → Artlist Search**. Se esse item não existir, a instalação do painel foi pulada ou o Resolve não foi reiniciado; o botão alternativo é **Workspace → Scripts → Artlist**, que abre o mesmo painel no navegador.
+**7. Abrir o painel.** Peça para ir em **Workspace → Workflow Integrations → Busca Busca Trilhas e SFX**. Se esse item não existir, a instalação do painel foi pulada ou o Resolve não foi reiniciado; o botão alternativo é **Workspace → Scripts → Busca Busca Trilhas e SFX**, que abre o mesmo painel no navegador.
 O painel tem, no topo, um diagnóstico com ✓/✗ de cada requisito (Claude CLI, login, conector Artlist, áudio do macOS, Resolve). Peça ao usuário para te dizer o que aparece e ajude a resolver cada ✗.
 
 **8. Encerrar.** Quando o diagnóstico estiver todo ✓, resuma em poucas linhas: o que foi instalado, onde, e como usar (buscar → ouvir → arrastar na waveform para marcar In/Out → "Inserir no playhead"). Diga que a pasta de downloads (padrão `~/Music/Artlist-Resolve`) pode ser trocada na própria tela do app, no botão "Alterar pasta…".
@@ -50,6 +50,6 @@ Só se o usuário pediu para atualizar: rode `git -C ~/ArtlistResolve pull` e de
 
 ## Referência: o que o instalador faz
 - Confere Python 3 e o Claude Code CLI (instala o CLI com o instalador oficial da Anthropic, se faltar).
-- Copia o app para `~/Library/Application Support/ArtlistResolve/app` e o botão para `.../Fusion/Scripts/Utility/Artlist.py`.
+- Copia o app para `~/Library/Application Support/ArtlistResolve/app` e o botão para `.../Fusion/Scripts/Utility/Busca Busca Trilhas e SFX.py`.
 - Instala o painel em `/Library/Application Support/Blackmagic Design/DaVinci Resolve/Workflow Integration Plugins/com.trendsy.artlistsearch` (pasta protegida; senha pela janela do macOS).
 - Não envia dados a servidores além das consultas ao Artlist pelo conector da conta do próprio usuário.

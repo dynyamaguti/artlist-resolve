@@ -2,7 +2,7 @@
 <BlackmagicDesign>
     <Plugin>
         <Id>com.trendsy.artlistsearch</Id>
-        <Name>Artlist Search</Name>
+        <Name>Busca Busca Trilhas e SFX</Name>
         <Version>1.0</Version>
         <Description>Busca música e SFX do Artlist e insere direto na timeline</Description>
         <FilePath>main.js</FilePath>

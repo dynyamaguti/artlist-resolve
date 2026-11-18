@@ -1,6 +1,6 @@
 {
     "name": "artlist-search",
     "version": "1.0.0",
-    "description": "Painel do Resolve para o app Artlist → Resolve",
+    "description": "Painel do Resolve para o app Busca Busca Trilhas e SFX",
     "main": "main.js"
 }

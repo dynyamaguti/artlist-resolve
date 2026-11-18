@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Instalador — Artlist → Resolve (macOS). Duplo clique ou:  ./instalar.command [--sim] [--sem-painel]
+# Instalador — Busca Busca Trilhas e SFX (macOS). Duplo clique ou:  ./instalar.command [--sim] [--sem-painel]
 #   --sim          não faz perguntas (usado quando o Claude instala por você)
 #   --sem-painel   pula o painel flutuante do Resolve (que exige senha de administrador)
 cd "$(dirname "$0")" || exit 1
@@ -47,9 +47,9 @@ pkill -f "ArtlistResolve/app/server.py" 2>/dev/null
 mkdir -p "$DEST" && cp -R "$SRC/server.py" "$SRC/static" "$SRC/README.md" "$DEST/" && ok "$DEST"
 
 step "Botão dentro do DaVinci Resolve"
-mkdir -p "$RES" && cp "$SRC/resolve/Artlist.py" "$RES/Artlist.py" && ok "Workspace ▸ Scripts ▸ Artlist (reinicie o Resolve se ele estiver aberto)"
+mkdir -p "$RES" && rm -f "$RES/Artlist.py"; cp "$SRC/resolve/Busca Busca Trilhas e SFX.py" "$RES/Busca Busca Trilhas e SFX.py" && ok "Workspace ▸ Scripts ▸ Busca Busca Trilhas e SFX (reinicie o Resolve se ele estiver aberto)"
 
-step "Painel dentro do Resolve (Workspace ▸ Workflow Integrations ▸ Artlist Search)"
+step "Painel dentro do Resolve (Workspace ▸ Workflow Integrations ▸ Busca Busca Trilhas e SFX)"
 PLG="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Workflow Integration Plugins"
 PID="com.trendsy.artlistsearch"
 PSRC="$SRC/resolve/plugin/$PID"
@@ -74,7 +74,7 @@ chmod 755 "$PLG/$PID"
 chmod 644 "$PLG/$PID"/*
 EOF
   if osascript -e "do shell script \"/bin/zsh $TMPS\" with administrator privileges with prompt \"O Artlist Resolve vai instalar o painel dentro do DaVinci Resolve.\"" >/dev/null 2>&1; then
-    ok "Instalado. Reinicie o Resolve: Workspace ▸ Workflow Integrations ▸ Artlist Search"
+    ok "Instalado. Reinicie o Resolve: Workspace ▸ Workflow Integrations ▸ Busca Busca Trilhas e SFX"
   else
     warn "Não foi possível instalar o painel (senha cancelada?). O botão do menu Scripts continua valendo."
   fi
@@ -100,8 +100,8 @@ print "  1. Login no Claude com a sua conta (Pro/Team), se ainda não fez."
 print "  2. claude.ai ▸ Configurações ▸ Conectores: conecte o Artlist e deixe em “Permitir” (✓) as"
 print "     ferramentas de busca de músicas, busca de SFX, detalhes da faixa e download."
 print "  3. Resolve ▸ Preferências ▸ Sistema ▸ Geral ▸ “Uso de script externo” = Local. Reinicie o Resolve."
-print "  4. Use: Resolve ▸ Workspace ▸ Workflow Integrations ▸ Artlist Search (painel) ou"
-print "     Workspace ▸ Scripts ▸ Artlist (navegador). A tela mostra o que ainda faltar."
+print "  4. Use: Resolve ▸ Workspace ▸ Workflow Integrations ▸ Busca Busca Trilhas e SFX (painel) ou"
+print "     Workspace ▸ Scripts ▸ Busca Busca Trilhas e SFX (navegador). A tela mostra o que ainda faltar."
 print "  Downloads: ~/Music/Artlist-Resolve (dá para trocar a pasta na tela do app)"
 
 if ask "Abrir o app agora?" manual; then

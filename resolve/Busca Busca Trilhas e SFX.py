@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""DaVinci Resolve → Workspace ▸ Scripts ▸ Artlist
+"""DaVinci Resolve → Workspace ▸ Scripts ▸ Busca Busca Trilhas e SFX
 
 Abre o dashboard de busca do Artlist. Se o servidor local ainda não estiver rodando, sobe em segundo plano.
 Instalado em: ~/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/Scripts/Utility/

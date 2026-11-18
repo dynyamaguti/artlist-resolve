@@ -695,6 +695,8 @@ class H(BaseHTTPRequestHandler):
                 self.send_header("Content-Length", str(len(data)))
                 self.end_headers()
                 self.wfile.write(data)
+            elif u.path.startswith("/assets/"):
+                self._asset(u.path[len("/assets/"):])
             elif u.path == "/api/ping":  # leve: não toca no Resolve (o script do menu usa isto)
                 self._json({"ok": True})
             elif u.path == "/api/status":
@@ -711,6 +713,21 @@ class H(BaseHTTPRequestHandler):
                 self._json({"error": "not found"}, 404)
         except Exception as e:
             self._json({"error": str(e)}, 500)
+
+    def _asset(self, name):
+        """Imagens da interface (ex.: mascote) em static/assets/. Só nome simples e extensões de imagem."""
+        types = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".svg": "image/svg+xml"}
+        ext = os.path.splitext(name)[1].lower()
+        path = HERE / "static" / "assets" / name
+        if not re.fullmatch(r"[\w.-]+", name) or ext not in types or not path.is_file():
+            return self._json({"error": "not found"}, 404)
+        data = path.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", types[ext])
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-cache")
+        self.end_headers()
+        self.wfile.write(data)
 
     def _audio(self, path):
         size = path.stat().st_size
@@ -761,7 +778,7 @@ class H(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     srv = ThreadingHTTPServer(("127.0.0.1", PORT), H)
-    print(f"Artlist → Resolve em http://127.0.0.1:{PORT}  (downloads em {get_downloads()})")
+    print(f"Busca Busca Trilhas e SFX em http://127.0.0.1:{PORT}  (downloads em {get_downloads()})")
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
