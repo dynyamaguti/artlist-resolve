@@ -18,7 +18,11 @@
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Inter",system-ui,sans-serif}
 header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
 h1{font-size:15px;margin:0;font-weight:650;letter-spacing:.2px}
-.pill{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+.vol{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.vol button{padding:3px 8px;font-size:14px;line-height:1}
+.vol input[type=range]{width:110px;accent-color:var(--accent);padding:0;background:transparent;border:0;cursor:pointer}
+#volPct{min-width:34px;font-variant-numeric:tabular-nums}
+.pill{margin-left:0;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--err)}
 .dot.on{background:var(--ok)}
 main{max-width:1100px;margin:0 auto;padding:18px 20px 80px}
@@ -78,6 +82,11 @@ kbd{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padd
   <div class="seg" id="kindSeg" style="margin-left:0">
     <button data-k="music" class="on">Músicas</button><button data-k="sfx">SFX</button>
   </div>
+  <div class="vol" title="Volume da prévia (não altera o volume do Mac) · atalho: M = mudo">
+    <button class="ghost" id="volBtn" aria-label="Ligar/desligar o som da prévia">🔊</button>
+    <input type="range" id="vol" min="0" max="100" step="1" value="70" aria-label="Volume da prévia">
+    <span id="volPct">70%</span>
+  </div>
   <div class="pill"><span class="dot" id="dot"></span><span id="rstat">Resolve: verificando…</span></div>
 </header>
 <main>
@@ -115,7 +124,7 @@ kbd{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padd
 
   <div class="interp" id="interp"></div>
   <div id="list"><div class="empty">Descreva a cena, cole um link do Artlist como referência ou escolha moods.</div></div>
-  <p class="meta" style="margin-top:18px">Atalhos (faixa tocando ou sob o mouse): <kbd>Espaço</kbd> play/pausa · <kbd>I</kbd> marca entrada · <kbd>O</kbd> marca saída — dê play e aperte I/O no ponto desejado. Ou arraste na waveform para selecionar; arraste a borda amarela para ajustar; <b>▶ Trecho</b> ouve só o In→Out. O download só acontece ao importar (conta no seu limite diário do Artlist).</p>
+  <p class="meta" style="margin-top:18px">Atalhos (faixa tocando ou sob o mouse): <kbd>Espaço</kbd> play/pausa · <kbd>M</kbd> mudo · <kbd>I</kbd> marca entrada · <kbd>O</kbd> marca saída — dê play e aperte I/O no ponto desejado. Ou arraste na waveform para selecionar; arraste a borda amarela para ajustar; <b>▶ Trecho</b> ouve só o In→Out. O download só acontece ao importar (conta no seu limite diário do Artlist).</p>
 </main>
 
 <script>
@@ -132,6 +141,22 @@ function hint(r, msg) { r.st.className = "status"; r.st.textContent = msg; clear
 // botão clicado não deve ficar com foco (senão Espaço/Enter reativam o botão e anulam o atalho)
 document.addEventListener("click", e => { const b = e.target.closest("button"); if (b) b.blur(); });
 const audio = new Audio(); audio.preload = "auto";
+
+/* ── Volume da prévia (independe do volume do Mac) ── */
+let volume = 0.7, muted = false;
+try { const s = JSON.parse(localStorage.getItem("artlistPreviewVol") || "null"); if (s && s.v >= 0 && s.v <= 1) { volume = s.v; muted = !!s.m; } } catch (e) {}
+function applyVol() {
+  // curva quadrática: o slider fica mais fino nos volumes baixos, onde o ouvido precisa de mais controle
+  audio.volume = muted ? 0 : volume * volume;
+  $("#vol").value = Math.round(volume * 100);
+  $("#volPct").textContent = muted ? "mudo" : Math.round(volume * 100) + "%";
+  $("#volBtn").textContent = (muted || volume === 0) ? "🔇" : volume < 0.4 ? "🔈" : "🔊";
+  try { localStorage.setItem("artlistPreviewVol", JSON.stringify({ v: volume, m: muted })); } catch (e) {}
+}
+function toggleMute() { if (volume === 0) { volume = 0.7; muted = false; } else muted = !muted; applyVol(); }
+$("#vol").addEventListener("input", e => { volume = Number(e.target.value) / 100; muted = false; applyVol(); });
+$("#volBtn").addEventListener("click", toggleMute);
+applyVol();
 
 const fmt = s => { s = Math.max(0, s||0); const m = Math.floor(s/60); return m + ":" + (s%60).toFixed(1).padStart(4,"0"); };
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -325,7 +350,9 @@ function dragStart(r, e) {
   addEventListener("mousemove", mv); addEventListener("mouseup", up);
 }
 addEventListener("keydown", e => {
-  if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName) || e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+  // campos de texto/seleção ignoram os atalhos; o slider de volume não (Espaço/I/O continuam valendo depois de mexer nele)
+  if ((e.target.matches && e.target.matches("input:not([type=range]), select, textarea")) || e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+  if (e.code === "KeyM") { toggleMute(); return; }
   const r = rows.get(activeId) || rows.get(hoverId); if (!r) return;
   if (e.code === "Space") { e.preventDefault(); toggle(r); }
   else if (e.code === "KeyI" || e.code === "KeyO") {
